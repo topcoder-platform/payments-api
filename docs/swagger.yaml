@@ -1,0 +1,834 @@
+swagger: '2.0'
+info:
+  description: >
+    ## Pagination
+
+    - Requests that return multiple items will be paginated to 20 items by
+    default.
+
+    - You can specify further pages with the `page` parameter.
+
+    - You can also set a custom page size up to 100 with the `perPage`
+    parameter.
+
+    - Pagination response data is included in http headers.
+
+    - By default, the response header contains links with `next`, `last`,
+    `first`, `prev` resource links.
+  version: 1.0.0
+  title: Payments V5 API
+host: api.topcoder.com
+basePath: /v5
+tags:
+  - name: Payments
+    description: operations on the payment entity
+  - name: PaymentTypes
+    description: operations on the payment type entity
+schemes:
+  - https
+  - http
+paths:
+  /payments:
+    get:
+      tags:
+        - Payments
+      description: >-
+        Retrieve payments in the system. Can be accessed by any authenticated
+        member.
+      produces:
+        - application/json
+      parameters:
+        - $ref: '#/parameters/page'
+        - $ref: '#/parameters/perPage'
+        - name: id
+          in: query
+          description: 'Filter by id, exact match'
+          required: false
+          type: string
+          format: UUID
+        - name: typeId
+          in: query
+          description: 'Filter by type id, exact match'
+          required: false
+          type: string
+          format: UUID
+        - name: description
+          in: query
+          description: >
+            Filter by description, case-insensitive, partial matches are
+            allowed.
+          required: false
+          type: string
+        - name: status
+          in: query
+          enum:
+            - Owed
+            - Canceled
+            - Paid
+          description: |
+            Filter by status.
+          required: false
+          type: string
+        - name: netAmountStart
+          in: query
+          description: Filter by net amount (lower bound)
+          required: false
+          type: integer
+        - name: netAmountEnd
+          in: query
+          description: Filter by net amount (upper bound)
+          required: false
+          type: string
+        - name: grossAmountStart
+          in: query
+          description: Filter by gross amount (lower bound)
+          required: false
+          type: string
+        - name: grossAmountEnd
+          in: query
+          description: Filter by gross amount (upper bound)
+          required: false
+          type: string
+        - name: dueDateStart
+          in: query
+          description: Filter by due date (lower bound of date range)
+          required: false
+          type: string
+          format: date-time
+        - name: dueDateEnd
+          in: query
+          description: Filter by due date (upper bound of date range)
+          required: false
+          type: string
+          format: date-time
+        - name: paidDateStart
+          in: query
+          description: Filter by paid date (lower bound of date range)
+          required: false
+          type: string
+          format: date-time
+        - name: paidDateEnd
+          in: query
+          description: Filter by paid date (upper bound of date range)
+          required: false
+          type: string
+          format: date-time
+        - name: createdDateStart
+          in: query
+          description: Filter by created date (lower bound of date range)
+          required: false
+          type: string
+          format: date-time
+        - name: createdDateEnd
+          in: query
+          description: Filter by created date (upper bound of date range)
+          required: false
+          type: string
+          format: date-time
+        - name: updatedDateStart
+          in: query
+          description: Filter by updated date (lower bound of date range)
+          required: false
+          type: string
+          format: date-time
+        - name: updatedDateEnd
+          in: query
+          description: Filter by updated date (upper bound of date range)
+          required: false
+          type: string
+          format: date-time
+        - name: createdBy
+          in: query
+          description: >-
+            Filter by 'createdBy' field, case-insensitive, partial matches are
+            allowed.
+          required: false
+          type: string
+        - name: updatedBy
+          in: query
+          description: >-
+            Filter by 'updatedBy' field, case-insensitive, partial matches are
+            allowed.
+          required: false
+          type: string
+        - name: memberId
+          in: query
+          description: 'Filter by member, only return payment this member can access to'
+          required: false
+          type: string
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Payment'
+          headers:
+            X-Next-Page:
+              type: integer
+              description: The index of the next page
+            X-Page:
+              type: integer
+              description: The index of the current page (starting at 1)
+            X-Per-Page:
+              type: integer
+              description: The number of items to list per page
+            X-Prev-Page:
+              type: integer
+              description: The index of the previous page
+            X-Total:
+              type: integer
+              description: The total number of items
+            X-Total-Pages:
+              type: integer
+              description: The total number of pages
+            Link:
+              type: string
+              description: Pagination link header.
+        '400':
+          description: Bad request.  Request parameters were invalid.
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '500':
+          description: Server error
+          schema:
+            $ref: '#/definitions/ErrorModel'
+    post:
+      tags:
+        - Payments
+      description: Create a new payment in the system. Can be accessed by Admin/M2M/Copilot
+      security:
+        - bearer: []
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/PaymentRequest'
+      responses:
+        '201':
+          description: Created - The request was successful and the resource is returned.
+          schema:
+            $ref: '#/definitions/Payment'
+        '400':
+          description: Bad request.  Request parameters were invalid.
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '401':
+          description: Unauthorized. Fail to authenticate the requester.
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '403':
+          description: >
+            Forbidden.  The requester does not have the correct permission to
+            create the new payment in the system
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '500':
+          description: Server error
+          schema:
+            $ref: '#/definitions/ErrorModel'
+  '/payments/:id':
+    get:
+      tags:
+        - Payments
+      description: >-
+        Retrieve the Payment with provided id. Can be accessed by Admin/M2M and
+        users as long as the memberId matches theirs
+      produces:
+        - application/json
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: UUID
+          description: The id of payment to retrieve
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/Payment'
+        '400':
+          description: Bad request.  Request parameters were invalid.
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '404':
+          description: Payment not found
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '500':
+          description: Server error
+          schema:
+            $ref: '#/definitions/ErrorModel'
+    put:
+      tags:
+        - Payments
+      description: >-
+        Update the payment with the provided id. Can be accessed by Admin/M2M
+        and copilots as long as the createdBy matches their username
+      security:
+        - bearer: []
+      produces:
+        - application/json
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: UUID
+          description: The id of payment to update
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/PaymentRequest'
+      responses:
+        '200':
+          description: Updated - The request was successful and the resource is returned
+          schema:
+            $ref: '#/definitions/Payment'
+        '400':
+          description: Bad request.  Request parameters were invalid.
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '401':
+          description: Unauthorized. Fail to authenticate the requester.
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '403':
+          description: >
+            Forbidden.  The requester does not have the correct permission to
+            update the payment
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '404':
+          description: Payment not found
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '500':
+          description: Server error
+          schema:
+            $ref: '#/definitions/ErrorModel'
+    patch:
+      tags:
+        - Payments
+      description: >-
+        Partially update the payment with the provided id. Only the fields that
+        are provided in the body will be changed. Can be accessed by Admin/M2M
+        and copilots as long as the createdBy matches their username
+      security:
+        - bearer: []
+      produces:
+        - application/json
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: UUID
+          description: The id of payment to update
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/PaymentRequest'
+      responses:
+        '200':
+          description: Updated - The request was successful and the resource is returned.
+          schema:
+            $ref: '#/definitions/Payment'
+        '400':
+          description: Bad request.  Request parameters were invalid.
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '401':
+          description: Unauthorized. Fail to authenticate the requester.
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '403':
+          description: >
+            Forbidden.  The requester does not have the correct permission to 
+            update the payment.
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '404':
+          description: Payment not found
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '500':
+          description: Server error
+          schema:
+            $ref: '#/definitions/ErrorModel'
+  /paymentTypes:
+    get:
+      tags:
+        - PaymentTypes
+      description: >
+        Retrieve payment types from the system. Can be accessed by
+        Admin/M2M/Copilot
+      security:
+        - bearer: []
+      produces:
+        - application/json
+      parameters:
+        - $ref: '#/parameters/page'
+        - $ref: '#/parameters/perPage'
+        - name: id
+          in: query
+          description: 'Filter by id, exact match'
+          required: false
+          type: string
+          format: UUID
+        - name: description
+          in: query
+          description: >
+            Filter by description, case-insensitive, partial matches are
+            allowed.
+          required: false
+          type: string
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/PaymentType'
+          headers:
+            X-Next-Page:
+              type: integer
+              description: The index of the next page
+            X-Page:
+              type: integer
+              description: The index of the current page (starting at 1)
+            X-Per-Page:
+              type: integer
+              description: The number of items to list per page
+            X-Prev-Page:
+              type: integer
+              description: The index of the previous page
+            X-Total:
+              type: integer
+              description: The total number of items
+            X-Total-Pages:
+              type: integer
+              description: The total number of pages
+            Link:
+              type: string
+              description: Pagination link header.
+        '400':
+          description: Bad request.  Request parameters were invalid.
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '401':
+          description: Unauthorized. Fail to authenticate the requester.
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '403':
+          description: >
+            Forbidden.  The requester does not have the correct permission to
+            access the payment types
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '500':
+          description: Server error
+          schema:
+            $ref: '#/definitions/ErrorModel'
+    post:
+      tags:
+        - PaymentTypes
+      description: |
+        Create a new payment type entity. Can be accessed by Admin/M2M
+      security:
+        - bearer: []
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/PaymentTypeRequest'
+      responses:
+        '201':
+          description: Created - The request was successful and the resource is returned.
+          schema:
+            $ref: '#/definitions/PaymentType'
+        '400':
+          description: Bad request.  Request parameters were invalid.
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '401':
+          description: Unauthorized. Fail to authenticate the requester.
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '403':
+          description: >
+            Forbidden.  The requester does not have the correct permission to
+            create the payment type
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '409':
+          description: |
+            Conflict. Other payment type has already used the same name.
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '500':
+          description: Server error
+          schema:
+            $ref: '#/definitions/ErrorModel'
+  '/paymentTypes/:id':
+    get:
+      tags:
+        - PaymentTypes
+      description: >-
+        Retrieve the payment type with provided id. Can be accessed by
+        Admin/M2M/Copilot
+      security:
+        - bearer: []
+      produces:
+        - application/json
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: UUID
+          description: The id of payment type to retrieve
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/PaymentType'
+        '400':
+          description: Bad request.  Request parameters were invalid.
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '401':
+          description: Unauthorized. Fail to authenticate the requester.
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '403':
+          description: >
+            Forbidden.  The requester does not have the correct permission to
+            access the payment type
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '404':
+          description: Payment type not found
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '500':
+          description: Server error
+          schema:
+            $ref: '#/definitions/ErrorModel'
+    put:
+      tags:
+        - PaymentTypes
+      description: >-
+        Update the payment type with the specified id. Can be accessed by
+        Admin/M2M
+      security:
+        - bearer: []
+      produces:
+        - application/json
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: UUID
+          description: The id of payment type to update
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/PaymentTypeRequest'
+      responses:
+        '200':
+          description: Updated - The request was successful and the resource is returned.
+          schema:
+            $ref: '#/definitions/PaymentType'
+        '400':
+          description: Bad request.  Request parameters were invalid.
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '401':
+          description: Unauthorized. Fail to authenticate the requester.
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '403':
+          description: >
+            Forbidden.  The requester does not have the correct permission to
+            update the payment type
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '404':
+          description: Payment type not found
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '409':
+          description: |
+            Conflict. Other payment type has already used the same name.
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '500':
+          description: Server error
+          schema:
+            $ref: '#/definitions/ErrorModel'
+    patch:
+      tags:
+        - PaymentTypes
+      description: >
+        Partially update the payment type with the provided id. Only the fields
+        that are provided in the body will be changed. Can be accessed by
+        Admin/M2M
+      security:
+        - bearer: []
+      produces:
+        - application/json
+      parameters:
+        - name: Id
+          in: path
+          required: true
+          type: string
+          format: UUID
+          description: The id of payment type to update
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/PaymentTypeRequest'
+      responses:
+        '200':
+          description: Updated - The request was successful and the resource is returned.
+          schema:
+            $ref: '#/definitions/PaymentType'
+        '400':
+          description: Bad request.  Request parameters were invalid.
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '401':
+          description: Unauthorized. Fail to authenticate the requester.
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '403':
+          description: >
+            Forbidden.  The requester does not have the correct permission to
+            update the payment type
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '404':
+          description: Payment type not found
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '409':
+          description: |
+            Conflict. Other payment type has already used the same name.
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '500':
+          description: Server error
+          schema:
+            $ref: '#/definitions/ErrorModel'
+    delete:
+      tags:
+        - PaymentTypes
+      description: Delete the payment type with provided id. Can be accessed by Admin/M2M
+      security:
+        - bearer: []
+      produces:
+        - application/json
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          format: UUID
+          description: The id of payment type to be deleted
+      responses:
+        '200':
+          description: Deleted - The request was successful and the resource is returned.
+          schema:
+            $ref: '#/definitions/PaymentType'
+        '400':
+          description: Bad request.  Request parameters were invalid.
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '401':
+          description: Unauthorized. Fail to authenticate the requester.
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '403':
+          description: >
+            Forbidden.  The requester does not have the correct permission to
+            delete the payment type
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '404':
+          description: Payment type not found
+          schema:
+            $ref: '#/definitions/ErrorModel'
+        '500':
+          description: Server error
+          schema:
+            $ref: '#/definitions/ErrorModel'
+securityDefinitions:
+  bearer:
+    type: apiKey
+    name: Authorization
+    in: header
+parameters:
+  page:
+    name: page
+    in: query
+    description: The page number.
+    required: false
+    type: integer
+    default: 1
+  perPage:
+    name: perPage
+    in: query
+    description: The number of items to list per page.
+    required: false
+    type: integer
+    default: 20
+    maximum: 100
+definitions:
+  Payment:
+    type: object
+    properties:
+      id:
+        type: string
+        description: The payment id.
+        format: UUID
+      description:
+        type: string
+        description: payment description
+      typeId:
+        type: string
+        description: The payment type id
+        format: UUID
+      netAmount:
+        type: integer
+        description: the net amount
+      grossAmount:
+        type: integer
+        description: the gross amount
+      status:
+        type: string
+        description: the status
+        enum:
+          - Owed
+          - Canceled
+          - Paid
+      dueDate:
+        type: string
+        format: date-time
+        description: >-
+          calculated based on the created property plus the dueDateInterval in
+          days from the payment type. ISO-8601 formatted date times
+          (YYYY-MM-DDTHH:mm:ss.sssZ)
+      created:
+        type: string
+        format: date-time
+        description: 'ISO-8601 formatted date times (YYYY-MM-DDTHH:mm:ss.sssZ)'
+      createdBy:
+        type: string
+        example: topcoder user
+      updated:
+        type: string
+        format: date-time
+        description: 'ISO-8601 formatted date times (YYYY-MM-DDTHH:mm:ss.sssZ)'
+      updatedBy:
+        type: string
+        example: topcoder user
+      paidDate:
+        type: string
+        format: date-time
+        description: 'ISO-8601 formatted date times (YYYY-MM-DDTHH:mm:ss.sssZ)'
+      memberId:
+        type: string
+        description: The member id
+        format: UUID
+    required:
+      - id
+      - description
+      - typeId
+      - netAmount
+      - grossAmount
+      - status
+      - dueDate
+      - created
+      - createdBy
+      - updated
+      - updatedBy
+  PaymentRequest:
+    type: object
+    properties:
+      description:
+        type: string
+        description: payment description
+      typeId:
+        type: string
+        description: The payment type id
+        format: UUID
+      netAmount:
+        type: integer
+        description: the net amount
+      grossAmount:
+        type: integer
+        description: the gross amount
+      status:
+        type: string
+        description: the status
+        enum:
+          - Owed
+          - Canceled
+          - Paid
+        default: Owed
+      memberId:
+        type: string
+        description: The member id
+        format: UUID
+  PaymentType:
+    type: object
+    properties:
+      id:
+        type: string
+        description: The payment type id
+        format: UUID
+      name:
+        type: string
+        description: payment type name
+      description:
+        type: string
+        description: payment type description
+      dueDateInterval:
+        type: integer
+        description: the due date interval used to calcualte payment due date
+    required:
+      - id
+      - name
+      - description
+      - dueDateInterval
+  PaymentTypeRequest:
+    type: object
+    properties:
+      name:
+        type: string
+        description: payment type name
+      description:
+        type: string
+        description: payment type description
+      dueDateInterval:
+        type: integer
+        description: the due date interval used to calcualte payment due date
+  ErrorModel:
+    type: object
+    properties:
+      message:
+        type: string
+        description: the error message
